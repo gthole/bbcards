@@ -65,25 +65,48 @@ def get_card_geometry(card_width_inches=2.0, card_height_inches=2.0, rounded_cor
 
 end
 
-def draw_grid(pdf, card_geometry)
-	
+def draw_grid(pdf, card_geometry, card_count)
+  width = card_geometry["card_width"]
+  height = card_geometry["card_height"]
+  across = card_geometry["cards_across"]
+  high = card_geometry["cards_high"]
+  page_height = card_geometry["page_height"]
+  row_count = ((card_count / across) + ((card_count % across) ? 1 : 0))
+
 	pdf.stroke do
 		if card_geometry["rounded_corners"] == false
-			#Draw vertical lines
-			0.upto(card_geometry["cards_across"]) do |i|
+			# Draw vertical lines
+			0.upto([across, card_count].min) do |i|
 				pdf.line(
-					[card_geometry["card_width"]*i, 0],
-					[card_geometry["card_width"]*i, card_geometry["page_height"]]
-					)
+          # From left to right, this is the point on the top of the page
+					[width * i, page_height],
+          # For the height of the line, take the minimum of the page height
+          # and the row count * height (offsetting by one card height depending
+          # on how many cards there are in this row)
+					[
+            width * i,
+            page_height - [
+              page_height, 
+              row_count * height - (height * (i > card_count % across ? 1 : 0))
+            ].min
+          ]
+				)
 			end
 		
-			#Draw horizontal lines
-			0.upto(card_geometry["cards_high"]) do |i|
+			# Draw horizontal lines
+			0.upto(row_count) do |i|
 				pdf.line(
-					[0,                           card_geometry["card_height"]*i],
-					[card_geometry["page_width"], card_geometry["card_height"]*i]
-					)
-		
+          # From top to bottom, this is the point on the left of the page
+					[0, height * (across - i + 1)],
+          # For width of the line, stop at the last card if we're in the last
+          # row (or there's only one row)
+					[
+            width * (across - (
+              i == row_count || row_count == 1 ? across - (card_count % across) : 0
+            )),
+            height * (across - i + 1)
+          ]
+				)	
 			end
 		else
 			0.upto(card_geometry["cards_across"]-1) do |i|
@@ -113,9 +136,9 @@ def box(pdf, card_geometry, index, &blck)
 	pdf.bounding_box([x,y], width: card_geometry["card_width"]-20, height: card_geometry["card_height"]-10, &blck)
 end
 
-def draw_logos(pdf, card_geometry, icon)
+def draw_logos(pdf, card_geometry, icon, card_count)
 	idx=0
-	while idx < card_geometry["cards_across"] * card_geometry["cards_high"]
+	while idx < card_count
 		box(pdf, card_geometry, idx) do
 			logo_max_height = 15
 			logo_max_width = card_geometry["card_width"]/2
@@ -152,7 +175,7 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black)
 		pdf.fill_color "211e1e"
 	end
 
-	draw_grid(pdf, card_geometry)
+	draw_grid(pdf, card_geometry, statements.length)
 	statements.each_with_index do |line, idx|
 		box(pdf, card_geometry, idx) do
 			
@@ -323,7 +346,7 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black)
 			end
 		end
 	end
-	draw_logos(pdf, card_geometry, icon)
+	draw_logos(pdf, card_geometry, icon, statements.length)
 	pdf.stroke_color "211e1e"
 	pdf.fill_color "211e1e"
 
