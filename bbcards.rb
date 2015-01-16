@@ -346,7 +346,9 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black)
 			end
 		end
 	end
-	draw_logos(pdf, card_geometry, icon, statements.length)
+  if icon
+    draw_logos(pdf, card_geometry, icon, statements.length)
+  end
 	pdf.stroke_color "211e1e"
 	pdf.fill_color "211e1e"
 
@@ -466,7 +468,7 @@ def render_cards(directory=".", white_file="white.txt", black_file="black.txt", 
 		icon_file  = directory + File::Separator + icon_file
 	end
 
-	if not File.exist? icon_file
+	if icon_file and not File.exist? icon_file
 		icon_file = "./default.png"
 	end
 
@@ -476,7 +478,7 @@ def render_cards(directory=".", white_file="white.txt", black_file="black.txt", 
 			output_file = directory.split(File::Separator).pop + ".pdf"
 		end
 	end
-	
+
 	if output_to_stdout and title.nil?
 		title = "Bigger, Blacker Cards"
 	elsif title.nil? and output_file != "cards.pdf"
